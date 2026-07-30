@@ -1,0 +1,3 @@
+class EMACrossStrategy(BaseStrategy):
+    def evaluate(self, bars):
+        ...
