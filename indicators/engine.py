@@ -1,13 +1,20 @@
-from .ema import EMA
+from .base import Indicator
 
 
 class IndicatorEngine:
 
     def __init__(self):
-        pass
 
-    def add_ema(self, df, period):
+        self.indicators = []
 
-        ema = EMA(period)
+    def add(self, indicator: Indicator):
 
-        return ema.apply(df)
+        self.indicators.append(indicator)
+
+    def apply(self, df):
+
+        for indicator in self.indicators:
+
+            df = indicator.apply(df)
+
+        return df
