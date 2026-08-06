@@ -4,54 +4,45 @@ from signals.signal import Signal, Action
 
 class EMACrossStrategy(Strategy):
 
-    def __init__(self, fast=10, slow=20):
-
-        self.fast = fast
-        self.slow = slow
-
-
+    
     def evaluate(self, df):
+
+        fast_period = self.params.get("fast", 10)
+        slow_period = self.params.get("slow", 20)
 
         previous = df.iloc[-2]
         current = df.iloc[-1]
-        fast = f"EMA_{self.fast}"
-        slow = f"EMA_{self.slow}"
+
+        fast_col = f"EMA_{fast_period}"
+        slow_col = f"EMA_{slow_period}"
         #
         # Bullish crossover
         #
         if (
-            previous["EMA_10"] <= previous["EMA_20"]
-            and current["EMA_10"] > current["EMA_20"]
+            previous[fast_col] <= previous[slow_col]
+            and current[fast_col] > current[slow_col]
         ):
-
             return Signal(
                 action=Action.BUY,
                 symbol=current["symbol"],
                 price=float(current["close"]),
-                reason="EMA10 crossed above EMA20"
+                reason=f"EMA{fast_period} crossed above EMA{slow_period}"
             )
 
-        #
-        # Bearish crossover
-        #
         if (
-            previous["EMA_10"] >= previous["EMA_20"]
-            and current["EMA_10"] < current["EMA_20"]
+            previous[fast_col] >= previous[slow_col]
+            and current[fast_col] < current[slow_col]
         ):
-
             return Signal(
                 action=Action.SELL,
                 symbol=current["symbol"],
-                price=current["close"],
-                reason="EMA10 crossed below EMA20"
+                price=float(current["close"]),
+                reason=f"EMA{fast_period} crossed below EMA{slow_period}"
             )
 
-        #
-        # No crossover
-        #
         return Signal(
             action=Action.HOLD,
             symbol=current["symbol"],
-            price=current["close"],
+            price=float(current["close"]),
             reason="No crossover"
         )

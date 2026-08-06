@@ -8,6 +8,7 @@ from indicators.ema import EMA
 
 #from strategies.ema_cross import EMACrossStrategy
 from strategies.factory import StrategyFactory
+from backtest.engine import BacktestEngine
 
 class TradingEngine:
 
@@ -64,7 +65,7 @@ class TradingEngine:
         for indicator_cfg in self.cfg.indicators:
 
             indicator = IndicatorFactory.create(
-                indicator_cfg
+                indicator_cfg   
             )
 
             self.indicators.add(indicator)
@@ -75,8 +76,20 @@ class TradingEngine:
         # Strategy
         #
 
-        signal = self.strategy.evaluate(df)
+        
 
-        print(signal)
+        backtester = BacktestEngine(self.strategy)
 
-        return signal
+        trades = backtester.run(df)
+
+        print()
+
+        print(f"Completed Trades: {len(trades)}")
+
+        for trade in trades[-5:]:
+
+            print(trade)
+
+        return trades
+
+        #return signal

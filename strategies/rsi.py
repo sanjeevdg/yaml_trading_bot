@@ -4,37 +4,32 @@ from signals.signal import Signal, Action
 
 class RSIStrategy(Strategy):
 
-    def __init__(self,
-                 period=14,
-                 oversold=30,
-                 overbought=70):
-
-        self.period = period
-        self.oversold = oversold
-        self.overbought = overbought
-
     def evaluate(self, df):
+
+        period = self.params.get("period", 14)
+        oversold = self.params.get("oversold", 30)
+        overbought = self.params.get("overbought", 70)
 
         last = df.iloc[-1]
 
-        rsi = last[f"RSI_{self.period}"]
+        rsi = last[f"RSI_{period}"]
 
-        if rsi <= self.oversold:
+        if rsi <= oversold:
 
             return Signal(
                 action=Action.BUY,
                 symbol=last["symbol"],
                 price=float(last["close"]),
-                reason=f"RSI {rsi:.2f} <= {self.oversold}"
+                reason=f"RSI {rsi:.2f} <= {oversold}"
             )
 
-        if rsi >= self.overbought:
+        if rsi >= overbought:
 
             return Signal(
                 action=Action.SELL,
                 symbol=last["symbol"],
                 price=float(last["close"]),
-                reason=f"RSI {rsi:.2f} >= {self.overbought}"
+                reason=f"RSI {rsi:.2f} >= {overbought}"
             )
 
         return Signal(

@@ -4,11 +4,11 @@ from signals.signal import Signal, Action
 
 class BollingerStrategy(Strategy):
 
-    def __init__(self, period=20, stddev=2):
-        self.period = period
-        self.stddev = stddev
 
     def evaluate(self, df):
+
+        period = self.params.get("period", 20)
+        stddev = self.params.get("stddev", 2)
 
         last = df.iloc[-1]
 
