@@ -11,3 +11,7 @@ class Position:
     entry_price: float
 
     entry_time: object
+
+    stop_loss: float | None = None
+
+    take_profit: float | None = None

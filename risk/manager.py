@@ -1,6 +1,13 @@
-
 class RiskManager:
 
-    def approve(self, signal):
+    def approve(
 
-        return signal
+        self,
+
+        portfolio,
+
+        signal
+
+    ):
+
+        return True

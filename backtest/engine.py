@@ -1,131 +1,150 @@
-from rich import print
 
-from .position import Position
-from .trade import Trade
+from backtest.portfolio import Portfolio
+from backtest.execution import ExecutionSimulator
+from backtest.equity import EquityPoint
+
+from signals.signal import Action
 
 
 class BacktestEngine:
 
-    def __init__(self, strategy):
+    def __init__(
+
+        self,
+
+        strategy,
+
+        initial_cash=10000,
+
+        quantity=1
+
+    ):
 
         self.strategy = strategy
 
-        self.position = None
+        self.portfolio = Portfolio(initial_cash)
 
-        self.trades = []
+        self.execution = ExecutionSimulator(
+
+            self.portfolio
+
+        )
+
+        self.quantity = quantity
+
+        self.equity_curve = []
 
     def run(self, df):
 
-        #
-        # Need enough candles for indicators
-        #
-        start = 50
+        symbol = df.iloc[0]["symbol"]
 
-        for i in range(start, len(df)):
+        #
+        # Replay history candle by candle
+        #
+
+        for i in range(50, len(df)):
 
             history = df.iloc[: i + 1]
 
-            signal = self.strategy.evaluate(history)
-
             current = history.iloc[-1]
-
-            price = float(current["close"])
 
             timestamp = current["timestamp"]
 
-            symbol = current["symbol"]
+            price = float(current["close"])
+
+            #
+            # Ask strategy
+            #
+
+            signal = self.strategy.evaluate(
+
+                history
+
+            )
 
             #
             # BUY
             #
-            if signal.action.value == "BUY":
 
-                if self.position is None:
+            if signal.action == Action.BUY:
 
-                    self.position = Position(
+                if not self.portfolio.has_position(
+
+                    symbol
+
+                ):
+
+                    self.execution.execute_buy(
+
                         symbol=symbol,
-                        quantity=1,
-                        entry_price=price,
-                        entry_time=timestamp
-                    )
 
-                    print(
-                        f"[green]BUY[/green] "
-                        f"{symbol} @ {price:.2f}"
+                        price=price,
+
+                        quantity=self.quantity,
+
+                        timestamp=timestamp
+
                     )
 
             #
             # SELL
             #
-            elif signal.action.value == "SELL":
 
-                if self.position is not None:
+            elif signal.action == Action.SELL:
 
-                    pnl = (
-                        price
-                        - self.position.entry_price
-                    ) * self.position.quantity
+                if self.portfolio.has_position(
 
-                    trade = Trade(
+                    symbol
+
+                ):
+
+                    self.execution.execute_sell(
 
                         symbol=symbol,
 
-                        entry_time=self.position.entry_time,
+                        price=price,
 
-                        exit_time=timestamp,
-
-                        entry_price=self.position.entry_price,
-
-                        exit_price=price,
-
-                        quantity=self.position.quantity,
-
-                        pnl=pnl
+                        timestamp=timestamp
 
                     )
 
-                    self.trades.append(trade)
+            #
+            # Record equity
+            #
 
-                    print(
-                        f"[red]SELL[/red] "
-                        f"{symbol} "
-                        f"P/L={pnl:.2f}"
-                    )
+            equity = self.portfolio.update(
+                {symbol: price}
+            )
 
-                    self.position = None
+            self.equity_curve.append(
 
-        #
-        # Close any open trade at the end
-        #
-        if self.position is not None:
+                EquityPoint(
 
-            last = df.iloc[-1]
+                    timestamp=timestamp,
 
-            pnl = (
-                float(last["close"])
-                - self.position.entry_price
-            ) * self.position.quantity
-
-            self.trades.append(
-
-                Trade(
-
-                    symbol=self.position.symbol,
-
-                    entry_time=self.position.entry_time,
-
-                    exit_time=last["timestamp"],
-
-                    entry_price=self.position.entry_price,
-
-                    exit_price=float(last["close"]),
-
-                    quantity=self.position.quantity,
-
-                    pnl=pnl
+                    equity=equity
 
                 )
 
             )
 
-        return self.trades
+        #
+        # Close any open trade
+        #
+
+        if self.portfolio.has_position(symbol):
+
+            last = df.iloc[-1]
+
+            self.execution.execute_sell(
+
+                symbol=symbol,
+
+                price=float(last["close"]),
+
+                timestamp=last["timestamp"]
+
+            )
+
+        return self.portfolio.trade_history
+

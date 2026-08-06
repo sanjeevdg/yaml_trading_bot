@@ -78,7 +78,13 @@ class TradingEngine:
 
         
 
-        backtester = BacktestEngine(self.strategy)
+        backtester = BacktestEngine(
+            strategy=self.strategy,
+
+            initial_cash=10000,
+
+            quantity=1
+        )
 
         trades = backtester.run(df)
 
