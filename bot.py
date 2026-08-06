@@ -2,9 +2,10 @@
 
 import argparse
 
+from rich import print
+
 from core import ConfigLoader
 from core.engine import TradingEngine
-
 from core.logger import BotLogger
 
 
@@ -24,9 +25,10 @@ def main():
 
     engine = TradingEngine(cfg)
 
-    engine.run()
+    signal = engine.run()
+
+    print(signal)
 
 
 if __name__ == "__main__":
-
     main()

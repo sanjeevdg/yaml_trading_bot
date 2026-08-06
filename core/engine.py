@@ -59,13 +59,15 @@ class TradingEngine:
         # Indicators
         #
 
-        self.indicators.add(
-            EMA(10)
-        )
+        from indicators.factory import IndicatorFactory
 
-        self.indicators.add(
-            EMA(20)
-        )
+        for indicator_cfg in self.cfg.indicators:
+
+            indicator = IndicatorFactory.create(
+                indicator_cfg.model_dump()
+            )
+
+            self.indicators.add(indicator)
 
         df = self.indicators.apply(df)
 

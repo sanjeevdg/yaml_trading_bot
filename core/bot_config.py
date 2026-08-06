@@ -1,18 +1,25 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 from .broker_config import BrokerConfig
 from .market_config import MarketConfig
-from .strategy_config import StrategyDefinition
+from .indicator_config import IndicatorConfig
+from .strategy_config import StrategyConfig
 from .risk_config import RiskConfig
 from .schedule_config import ScheduleConfig
 
-from .indicator_config import IndicatorConfig
 
 class BotConfig(BaseModel):
-    broker: BrokerConfig
-    market: MarketConfig
-    indicators: list[IndicatorConfig] = []
-    strategy: StrategyDefinition
-    risk: RiskConfig
-    schedule: ScheduleConfig
 
+    broker: BrokerConfig
+
+    market: MarketConfig
+
+    indicators: list[IndicatorConfig]
+
+    strategy: StrategyConfig
+
+    risk: Optional[RiskConfig] = None
+
+    schedule: Optional[ScheduleConfig] = None

@@ -1,0 +1,19 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+  - type: macd
+    fast: 12
+    slow: 26
+    signal: 9
+
+strategy:
+  type: macd
+  parameters: {}
