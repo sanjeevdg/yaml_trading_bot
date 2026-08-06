@@ -1,0 +1,23 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+  - type: ema
+    period: 20
+
+  - type: rsi
+    period: 14
+
+strategy:
+  type: ema_rsi
+  parameters:
+    ema: 20
+    oversold: 35
+    overbought: 65

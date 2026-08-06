@@ -64,7 +64,7 @@ class TradingEngine:
         for indicator_cfg in self.cfg.indicators:
 
             indicator = IndicatorFactory.create(
-                indicator_cfg.model_dump()
+                indicator_cfg
             )
 
             self.indicators.add(indicator)

@@ -1,16 +1,10 @@
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IndicatorConfig(BaseModel):
 
     type: str
 
-    period: int | None = None
-
-    fast: int | None = None
-
-    slow: int | None = None
-
-    signal: int | None = None
+    parameters: dict[str, Any] = Field(default_factory=dict)

@@ -1,0 +1,23 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+
+  - type: atr
+    period: 14
+
+strategy:
+  type: atr_breakout
+
+  parameters:
+
+    period: 14
+
+    multiplier: 2

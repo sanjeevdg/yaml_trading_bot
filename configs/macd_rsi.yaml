@@ -1,0 +1,28 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+
+  - type: macd
+    parameters:
+      fast: 12
+      slow: 26
+      signal: 9
+
+  - type: rsi
+    parameters:
+      period: 14
+
+strategy:
+  type: macd_rsi
+
+  parameters:
+    oversold: 35
+    overbought: 65

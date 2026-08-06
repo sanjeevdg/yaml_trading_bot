@@ -1,0 +1,30 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+
+  - type: atr
+    period: 10
+
+  - type: supertrend
+
+    period: 10
+
+    multiplier: 3
+
+strategy:
+
+  type: supertrend
+
+  parameters:
+
+    period: 10
+
+    multiplier: 3

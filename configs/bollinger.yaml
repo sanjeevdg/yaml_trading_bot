@@ -1,0 +1,22 @@
+broker:
+  provider: alpaca
+  paper: true
+
+market:
+  provider: alpaca
+  symbols:
+    - AAPL
+  timeframe: 5Min
+
+indicators:
+
+  - type: bollinger
+    period: 20
+    stddev: 2
+
+strategy:
+  type: bollinger
+
+  parameters:
+    period: 20
+    stddev: 2

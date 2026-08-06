@@ -1,10 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
 class Action(Enum):
+
     BUY = "BUY"
+
     SELL = "SELL"
+
     HOLD = "HOLD"
 
 
@@ -15,6 +18,10 @@ class Signal:
 
     symbol: str
 
+    price: float
+
     reason: str
 
-    price: float
+    confidence: float = 1.0
+
+    indicators: dict = field(default_factory=dict)
