@@ -2,31 +2,53 @@ from strategies.base import Strategy
 from signals.signal import Signal, Action
 
 
-
 class SuperTrendStrategy(Strategy):
-
-    def __init__(self,**kwargs):
-        pass
 
     def evaluate(self, df):
 
+        period = self.params.get("period", 10)
+        multiplier = self.params.get("multiplier", 3)
+
         last = df.iloc[-1]
 
-        symbol = last["symbol"]
-        price = float(last["close"])
+        close = float(last["close"])
+        supertrend = float(last["SUPERTREND"])
 
-        if last["SUPERTREND_UP"]:
+        symbol = last["symbol"]
+
+        #
+        # BUY
+        #
+
+        if close > supertrend:
 
             return Signal(
-                Action.BUY,
-                symbol,
-                price,
-                "SuperTrend bullish"
+                action=Action.BUY,
+                symbol=symbol,
+                price=close,
+                reason=f"Price above SuperTrend ({period}, {multiplier})"
             )
 
+        #
+        # SELL
+        #
+
+        if close < supertrend:
+
+            return Signal(
+                action=Action.SELL,
+                symbol=symbol,
+                price=close,
+                reason=f"Price below SuperTrend ({period}, {multiplier})"
+            )
+
+        #
+        # HOLD
+        #
+
         return Signal(
-            Action.SELL,
-            symbol,
-            price,
-            "SuperTrend bearish"
+            action=Action.HOLD,
+            symbol=symbol,
+            price=close,
+            reason="Price on SuperTrend"
         )

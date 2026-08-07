@@ -23,7 +23,20 @@ indicators:
 
 strategy:
   type: ema_cross
+
   parameters: {}
+
+  optimize:
+    fast:
+      start: 5
+      stop: 20
+      step: 1
+
+    slow:
+      start: 20
+      stop: 60
+      step: 5
+
 
 risk:
   position_size:

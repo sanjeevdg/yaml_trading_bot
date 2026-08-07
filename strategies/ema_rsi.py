@@ -4,56 +4,53 @@ from signals.signal import Signal, Action
 
 class EMARSIStrategy(Strategy):
 
-    def __init__(
-        self,
-        ema=20,
-        oversold=35,
-        overbought=65
-    ):
-        self.ema = ema
-        self.oversold = oversold
-        self.overbought = overbought
-
     def evaluate(self, df):
+
+        ema_period = self.params.get("ema", 20)
+        rsi_period = self.params.get("period", 14)
+        oversold = self.params.get("oversold", 35)
+        overbought = self.params.get("overbought", 65)
 
         last = df.iloc[-1]
 
-        ema = last[f"EMA_{self.ema}"]
-        rsi = last["RSI_14"]
+        ema = float(last[f"EMA_{ema_period}"])
+        rsi = float(last[f"RSI_{rsi_period}"])
         close = float(last["close"])
+        symbol = last["symbol"]
 
         #
         # Buy
         #
-        if close > ema and rsi < self.oversold:
+
+        if close > ema and rsi <= oversold:
 
             return Signal(
                 action=Action.BUY,
-                symbol=last["symbol"],
+                symbol=symbol,
                 price=close,
-                reason="Above EMA and RSI oversold"
+                reason=f"Price > EMA{ema_period} and RSI {rsi:.2f} <= {oversold}"
             )
 
         #
         # Sell
         #
-        if close < ema and rsi > self.overbought:
+
+        if close < ema and rsi >= overbought:
 
             return Signal(
                 action=Action.SELL,
-                symbol=last["symbol"],
+                symbol=symbol,
                 price=close,
-                reason="Below EMA and RSI overbought"
+                reason=f"Price < EMA{ema_period} and RSI {rsi:.2f} >= {overbought}"
             )
+
+        #
+        # Hold
+        #
 
         return Signal(
             action=Action.HOLD,
-            symbol=last["symbol"],
+            symbol=symbol,
             price=close,
-            reason=(
-                f"Close={close:.2f}, "
-                f"EMA20={ema:.2f}, "
-                f"RSI14={rsi:.1f}. "
-                "Buy/Sell conditions not met."
-            )
+            reason="EMA/RSI conditions not met"
         )

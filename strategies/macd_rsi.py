@@ -4,46 +4,54 @@ from signals.signal import Signal, Action
 
 class MACDRSIStrategy(Strategy):
 
-    def __init__(self, oversold=35, overbought=65):
-
-        self.oversold = oversold
-        self.overbought = overbought
-
     def evaluate(self, df):
+
+        rsi_period = self.params.get("period", 14)
+        oversold = self.params.get("oversold", 35)
+        overbought = self.params.get("overbought", 65)
 
         last = df.iloc[-1]
 
-        close = float(last["close"])
-
         macd = float(last["MACD"])
-
         signal = float(last["MACD_SIGNAL"])
+        rsi = float(last[f"RSI_{rsi_period}"])
 
-        rsi = float(last["RSI_14"])
-
+        close = float(last["close"])
         symbol = last["symbol"]
 
-        if macd > signal and rsi < self.oversold:
+        #
+        # BUY
+        #
+
+        if macd > signal and rsi <= oversold:
 
             return Signal(
-                Action.BUY,
-                symbol,
-                close,
-                "Bullish MACD with oversold RSI"
+                action=Action.BUY,
+                symbol=symbol,
+                price=close,
+                reason=f"MACD bullish and RSI {rsi:.2f} <= {oversold}"
             )
 
-        if macd < signal and rsi > self.overbought:
+        #
+        # SELL
+        #
+
+        if macd < signal and rsi >= overbought:
 
             return Signal(
-                Action.SELL,
-                symbol,
-                close,
-                "Bearish MACD with overbought RSI"
+                action=Action.SELL,
+                symbol=symbol,
+                price=close,
+                reason=f"MACD bearish and RSI {rsi:.2f} >= {overbought}"
             )
+
+        #
+        # HOLD
+        #
 
         return Signal(
-            Action.HOLD,
-            symbol,
-            close,
-            "No MACD/RSI setup"
+            action=Action.HOLD,
+            symbol=symbol,
+            price=close,
+            reason="MACD/RSI conditions not met"
         )

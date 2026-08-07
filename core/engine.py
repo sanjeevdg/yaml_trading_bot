@@ -9,6 +9,8 @@ from indicators.ema import EMA
 #from strategies.ema_cross import EMACrossStrategy
 from strategies.factory import StrategyFactory
 from backtest.engine import BacktestEngine
+from optimizer.engine import Optimizer
+
 
 class TradingEngine:
 
@@ -34,7 +36,7 @@ class TradingEngine:
             config.strategy
         )
 
-    def run(self):
+    def run(self, mode="signal"):
 
         #
         # Connect
@@ -65,7 +67,7 @@ class TradingEngine:
         for indicator_cfg in self.cfg.indicators:
 
             indicator = IndicatorFactory.create(
-                indicator_cfg   
+                indicator_cfg.model_dump(exclude_none=True)
             )
 
             self.indicators.add(indicator)
@@ -86,16 +88,37 @@ class TradingEngine:
             quantity=1
         )
 
-        trades = backtester.run(df)
+        if mode == "signal":
 
-        print()
+            result = self.strategy.evaluate(df)
 
-        print(f"Completed Trades: {len(trades)}")
+        elif mode == "backtest":
 
-        for trade in trades[-5:]:
+            backtester = BacktestEngine(
+                strategy=self.strategy
+            )
 
-            print(trade)
+            result = backtester.run(df)
 
-        return trades
+            print(f"\nCompleted Backtest: {len(result)}")
 
-        #return signal
+            if result:
+
+                print("\nLast 5 Trades:\n")
+
+                for trade in result[-5:]:
+
+                    print(trade)
+        elif mode == "optimize":
+
+            optimizer = Optimizer(
+                strategy=self.strategy,
+                config=self.cfg
+            )
+
+            return optimizer.run(df)            
+        else:
+
+            raise ValueError(f"Unknown mode: {mode}")
+
+        return result

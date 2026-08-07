@@ -25,3 +25,37 @@ strategy:
 
   parameters:
     ema: 20
+
+  optimize:
+
+    ema:
+      start: 10
+      stop: 50
+      step: 5
+
+    fast:
+      start: 8
+      stop: 15
+      step: 1
+
+    slow:
+      start: 20
+      stop: 40
+      step: 2
+
+    signal:
+      start: 5
+      stop: 12
+      step: 1
+
+risk:
+  position_size:
+    type: fixed_cash
+    amount: 1000
+
+  stop_loss: 2
+
+  take_profit: 5
+
+schedule:
+  interval: 60

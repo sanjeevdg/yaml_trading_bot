@@ -4,24 +4,23 @@ from signals.signal import Signal, Action
 
 class EMAMACDStrategy(Strategy):
 
-    def __init__(self, ema=20):
-        self.ema = ema
-
     def evaluate(self, df):
+
+        ema_period = self.params.get("ema", 20)
 
         last = df.iloc[-1]
 
         close = float(last["close"])
 
-        ema = float(last[f"EMA_{self.ema}"])
+        ema = float(last[f"EMA_{ema_period}"])
 
         macd = float(last["MACD"])
 
-        signal = float(last["MACD_SIGNAL"])
+        macd_signal = float(last["MACD_SIGNAL"])
 
         symbol = last["symbol"]
 
-        if close > ema and macd > signal:
+        if close > ema and macd > macd_signal:
 
             return Signal(
                 Action.BUY,
@@ -30,7 +29,7 @@ class EMAMACDStrategy(Strategy):
                 "Price above EMA and MACD bullish"
             )
 
-        if close < ema and macd < signal:
+        if close < ema and macd < macd_signal:
 
             return Signal(
                 Action.SELL,

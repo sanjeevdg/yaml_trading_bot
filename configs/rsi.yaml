@@ -9,13 +9,44 @@ market:
   timeframe: 5Min
 
 indicators:
-  - type: rsi
-    period: 14
 
+  - type: rsi
+    parameters:
+      period: 14
 
 strategy:
   type: rsi
+
   parameters:
     period: 14
     oversold: 30
     overbought: 70
+
+  optimize:
+
+    period:
+      start: 5
+      stop: 30
+      step: 1
+
+    oversold:
+      start: 20
+      stop: 40
+      step: 5
+
+    overbought:
+      start: 60
+      stop: 80
+      step: 5
+
+risk:
+  position_size:
+    type: fixed_cash
+    amount: 1000
+
+  stop_loss: 2
+
+  take_profit: 5
+
+schedule:
+  interval: 60

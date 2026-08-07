@@ -11,13 +11,36 @@ market:
 indicators:
 
   - type: atr
-    period: 14
+    parameters:
+      period: 14
 
 strategy:
   type: atr_breakout
 
   parameters:
-
     period: 14
+    multiplier: 2.0
 
-    multiplier: 2
+  optimize:
+
+    period:
+      start: 5
+      stop: 30
+      step: 1
+
+    multiplier:
+      start: 1
+      stop: 5
+      step: 1
+
+risk:
+  position_size:
+    type: fixed_cash
+    amount: 1000
+
+  stop_loss: 2
+
+  take_profit: 5
+
+schedule:
+  interval: 60

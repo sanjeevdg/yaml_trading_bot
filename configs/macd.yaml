@@ -9,11 +9,43 @@ market:
   timeframe: 5Min
 
 indicators:
+
   - type: macd
-    fast: 12
-    slow: 26
-    signal: 9
+    parameters:
+      fast: 12
+      slow: 26
+      signal: 9
 
 strategy:
   type: macd
+
   parameters: {}
+
+  optimize:
+
+    fast:
+      start: 8
+      stop: 15
+      step: 1
+
+    slow:
+      start: 20
+      stop: 40
+      step: 2
+
+    signal:
+      start: 5
+      stop: 12
+      step: 1
+
+risk:
+  position_size:
+    type: fixed_cash
+    amount: 1000
+
+  stop_loss: 2
+
+  take_profit: 5
+
+schedule:
+  interval: 60
