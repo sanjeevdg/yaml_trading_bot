@@ -20,23 +20,37 @@ indicators:
       multiplier: 3
 
 strategy:
-  type: supertrend
+  type: rules
 
   parameters:
     period: 10
     multiplier: 3
 
-  optimize:
+  buy:
+    all:
 
-    period:
-      start: 7
-      stop: 20
-      step: 1
+      - left: close
+        op: ">"
+        right: SUPERTREND
 
-    multiplier:
-      start: 2
-      stop: 5
-      step: 1
+  sell:
+    all:
+
+      - left: close
+        op: "<"
+        right: SUPERTREND
+
+optimize:
+
+  period:
+    start: 7
+    stop: 20
+    step: 1
+
+  multiplier:
+    start: 2
+    stop: 5
+    step: 1
 
 risk:
   position_size:

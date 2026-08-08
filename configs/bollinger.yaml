@@ -16,23 +16,37 @@ indicators:
       stddev: 2
 
 strategy:
-  type: bollinger
+  type: rules
 
   parameters:
     period: 20
     stddev: 2
 
-  optimize:
+  buy:
+    all:
 
-    period:
-      start: 10
-      stop: 40
-      step: 2
+      - left: close
+        op: "<="
+        right: BB_LOWER
 
-    stddev:
-      start: 1
-      stop: 3
-      step: 1
+  sell:
+    all:
+
+      - left: close
+        op: ">="
+        right: BB_UPPER
+
+optimize:
+
+  period:
+    start: 10
+    stop: 40
+    step: 2
+
+  stddev:
+    start: 1
+    stop: 3
+    step: 1
 
 risk:
   position_size:
@@ -40,7 +54,6 @@ risk:
     amount: 1000
 
   stop_loss: 2
-
   take_profit: 5
 
 schedule:

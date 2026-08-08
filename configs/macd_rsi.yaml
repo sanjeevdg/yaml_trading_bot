@@ -21,44 +21,69 @@ indicators:
       period: 14
 
 strategy:
-  type: macd_rsi
+  type: rules
 
   parameters:
+    fast: 12
+    slow: 26
+    signal: 9
     period: 14
     oversold: 35
     overbought: 65
 
-  optimize:
+  buy:
+    all:
 
-    fast:
-      start: 8
-      stop: 15
-      step: 1
+      - left: MACD
+        op: ">"
+        right: MACD_SIGNAL
 
-    slow:
-      start: 20
-      stop: 40
-      step: 2
+      - left: RSI_{period}
+        op: "<="
+        right: oversold
 
-    signal:
-      start: 5
-      stop: 12
-      step: 1
+  sell:
+    all:
 
-    period:
-      start: 10
-      stop: 20
-      step: 2
+      - left: MACD
+        op: "<"
+        right: MACD_SIGNAL
 
-    oversold:
-      start: 20
-      stop: 40
-      step: 5
+      - left: RSI_{period}
+        op: ">="
+        right: overbought
 
-    overbought:
-      start: 60
-      stop: 80
-      step: 5
+optimize:
+
+  fast:
+    start: 8
+    stop: 15
+    step: 1
+
+  slow:
+    start: 20
+    stop: 40
+    step: 2
+
+  signal:
+    start: 5
+    stop: 12
+    step: 1
+
+  period:
+    start: 10
+    stop: 20
+    step: 2
+
+  oversold:
+    start: 20
+    stop: 40
+    step: 5
+
+  overbought:
+    start: 60
+    stop: 80
+    step: 5
 
 risk:
   position_size:

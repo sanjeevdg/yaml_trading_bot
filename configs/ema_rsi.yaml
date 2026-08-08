@@ -19,7 +19,7 @@ indicators:
       period: 14
 
 strategy:
-  type: ema_rsi
+  type: rules
 
   parameters:
     ema: 20
@@ -27,27 +27,49 @@ strategy:
     oversold: 35
     overbought: 65
 
-  optimize:
+  buy:
+    all:
 
-    ema:
-      start: 10
-      stop: 50
-      step: 5
+      - left: close
+        op: ">"
+        right: EMA_{ema}
 
-    period:
-      start: 10
-      stop: 20
-      step: 2
+      - left: RSI_{period}
+        op: "<="
+        right: oversold
 
-    oversold:
-      start: 20
-      stop: 40
-      step: 5
+  sell:
+    all:
 
-    overbought:
-      start: 60
-      stop: 80
-      step: 5
+      - left: close
+        op: "<"
+        right: EMA_{ema}
+
+      - left: RSI_{period}
+        op: ">="
+        right: overbought
+
+optimize:
+
+  ema:
+    start: 10
+    stop: 50
+    step: 5
+
+  period:
+    start: 10
+    stop: 20
+    step: 2
+
+  oversold:
+    start: 20
+    stop: 40
+    step: 5
+
+  overbought:
+    start: 60
+    stop: 80
+    step: 5
 
 risk:
   position_size:

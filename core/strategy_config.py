@@ -10,3 +10,5 @@ class StrategyConfig(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
     optimize: dict[str, Any] = Field(default_factory=dict)
+    buy: dict = {}
+    sell: dict = {}
