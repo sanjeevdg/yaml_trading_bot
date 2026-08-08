@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .broker_config import BrokerConfig
 from .market_config import MarketConfig
@@ -20,6 +20,11 @@ class BotConfig(BaseModel):
 
     strategy: StrategyConfig
 
+    optimize: dict = Field(
+        default_factory=dict
+    )
+
     risk: Optional[RiskConfig] = None
 
     schedule: Optional[ScheduleConfig] = None
+

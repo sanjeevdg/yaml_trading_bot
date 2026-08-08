@@ -29,24 +29,22 @@ strategy:
 
   buy:
     all:
-
       - left: close
         op: ">"
         right: EMA_{ema}
 
       - left: RSI_{period}
-        op: "<="
+        op: "<"
         right: oversold
 
   sell:
     all:
-
       - left: close
         op: "<"
         right: EMA_{ema}
 
       - left: RSI_{period}
-        op: ">="
+        op: ">"
         right: overbought
 
 optimize:

@@ -1,6 +1,7 @@
 from strategies.base import Strategy
 from signals.signal import Signal, Action
-
+from strategies.expression import SafeExpressionEvaluator
+from strategies.resolver import IndicatorValueResolver
 
 class RuleStrategy(Strategy):
 
@@ -45,7 +46,10 @@ class RuleStrategy(Strategy):
                 price=float(current["close"]),
                 reason="YAML sell rules satisfied"
             )
-
+        #print("RULE PARAMS:", self.params)
+        #print("BUY RULES:", self.buy_rules)
+        #print("SELL RULES:", self.sell_rules)
+        #print("COLUMNS:", df.columns.tolist())    
         return Signal(
             action=Action.HOLD,
             symbol=current["symbol"],
@@ -53,36 +57,102 @@ class RuleStrategy(Strategy):
             reason="No YAML rule satisfied"
         )
 
-    def evaluate_group(self, group, current, previous):
+    def evaluate_group(
+        self,
+        group,
+        current,
+        previous
+    ):
 
         if not group:
             return False
 
+        #
+        # ALL
+        #
+
         if "all" in group:
 
             return all(
-                self.evaluate_rule(
-                    rule,
+                self.evaluate_item(
+                    item,
                     current,
                     previous
                 )
-                for rule in group["all"]
+                for item in group["all"]
             )
+
+        #
+        # ANY
+        #
 
         if "any" in group:
 
             return any(
-                self.evaluate_rule(
-                    rule,
+                self.evaluate_item(
+                    item,
                     current,
                     previous
                 )
-                for rule in group["any"]
+                for item in group["any"]
             )
 
-        return False
+        #
+        # A group itself can also be a rule
+        #
+
+        return self.evaluate_item(
+            group,
+            current,
+            previous
+        )
+
+    def evaluate_item(
+        self,
+        item,
+        current,
+        previous
+    ):
+
+        #
+        # Nested ALL group
+        #
+
+        if "all" in item:
+
+            return self.evaluate_group(
+                item,
+                current,
+                previous
+            )
+
+        #
+        # Nested ANY group
+        #
+
+        if "any" in item:
+
+            return self.evaluate_group(
+                item,
+                current,
+                previous
+            )
+
+        #
+        # Normal comparison rule
+        #
+
+        return self.evaluate_rule(
+            item,
+            current,
+            previous
+        )    
 
     def evaluate_rule(self, rule, current, previous):
+
+        #
+        # Evaluate the rule against the CURRENT candle
+        #
 
         left = self.resolve_value(
             rule["left"],
@@ -116,16 +186,22 @@ class RuleStrategy(Strategy):
         if op == "!=":
             return left != right
 
+        #
+        # Crossover
+        #
+
         if op == "crossover":
 
             previous_left = self.resolve_value(
                 rule["left"],
-                previous
+                previous,
+                None
             )
 
             previous_right = self.resolve_value(
                 rule["right"],
-                previous
+                previous,
+                None
             )
 
             return (
@@ -133,16 +209,22 @@ class RuleStrategy(Strategy):
                 and left > right
             )
 
+        #
+        # Crossunder
+        #
+
         if op == "crossunder":
 
             previous_left = self.resolve_value(
                 rule["left"],
-                previous
+                previous,
+                None
             )
 
             previous_right = self.resolve_value(
                 rule["right"],
-                previous
+                previous,
+                None
             )
 
             return (
@@ -161,9 +243,6 @@ class RuleStrategy(Strategy):
         previous=None
     ):
 
-        if isinstance(value, (int, float)):
-            return float(value)
-
         #
         # Dictionary expression
         #
@@ -174,7 +253,7 @@ class RuleStrategy(Strategy):
 
             if expression is None:
                 raise ValueError(
-                    f"Invalid rule expression: {value}"
+                    f"Invalid expression: {value}"
                 )
 
             return self.evaluate_expression(
@@ -183,93 +262,21 @@ class RuleStrategy(Strategy):
                 previous
             )
 
-        if not isinstance(value, str):
-            raise ValueError(
-                f"Invalid rule value: {value}"
-            )
-
         #
-        # Strategy parameter
+        # String / numeric / indicator resolution
         #
 
-        if value in self.params:
-
-            return float(
-                self.params[value]
-            )
-
-        #
-        # Current dataframe column
-        #
-
-        if value in current.index:
-
-            return float(
-                current[value]
-            )
-
-        #
-        # Previous candle column
-        #
-
-        if value.startswith("previous."):
-
-            if previous is None:
-                raise ValueError(
-                    "Previous candle unavailable"
-                )
-
-            column = value.split(
-                ".", 1
-            )[1]
-
-            if column not in previous.index:
-                raise ValueError(
-                    f"Unknown previous column: {column}"
-                )
-
-            return float(
-                previous[column]
-            )
-
-        #
-        # Parameter substitution
-        #
-
-        if "{" in value and "}" in value:
-
-            resolved = value
-
-            for name, parameter in self.params.items():
-
-                resolved = resolved.replace(
-                    f"{{{name}}}",
-                    str(parameter)
-                )
-
-            value = resolved
-
-            if value in current.index:
-
-                return float(
-                    current[value]
-                )
-
-        #
-        # Numeric value
-        #
-
-        try:
-            return float(value)
-
-        except ValueError:
-            pass
-
-        raise ValueError(
-            f"Unable to resolve rule value: {value}"
+        return IndicatorValueResolver.resolve(
+            value,
+            current=current,
+            previous=previous,
+            parameters=self.params
         )
 
 
+    
+
+        
     def evaluate_expression(
         self,
         expression,
@@ -277,41 +284,48 @@ class RuleStrategy(Strategy):
         previous
     ):
 
-        expression = expression.strip()
+        variables = {}
 
         #
-        # Previous candle high
+        # Current candle
         #
 
-        expression = expression.replace(
-            "previous.high",
-            str(float(previous["high"]))
-        )
+        for column in current.index:
+
+            value = current[column]
+
+            try:
+                variables[column] = float(value)
+            except (TypeError, ValueError):
+                pass
 
         #
-        # Previous candle low
+        # Previous candle
         #
 
-        expression = expression.replace(
-            "previous.low",
-            str(float(previous["low"]))
-        )
+        if previous is not None:
 
-        #
-        # Current ATR
-        #
+            for column in previous.index:
 
-        if "ATR" in expression:
+                value = previous[column]
 
-            if "ATR" not in current.index:
-                raise ValueError(
-                    "ATR column not found"
-                )
+                try:
+                    variables[f"previous_{column}"] = float(value)
+                except (TypeError, ValueError):
+                    pass
 
-            expression = expression.replace(
-                "ATR",
-                str(float(current["ATR"]))
-            )
+            #
+            # Explicit aliases for expressions
+            #
+
+            try:
+                variables["previous_open"] = float(previous["open"])
+                variables["previous_high"] = float(previous["high"])
+                variables["previous_low"] = float(previous["low"])
+                variables["previous_close"] = float(previous["close"])
+                variables["previous_volume"] = float(previous["volume"])
+            except (KeyError, TypeError, ValueError):
+                pass
 
         #
         # Strategy parameters
@@ -319,30 +333,52 @@ class RuleStrategy(Strategy):
 
         for name, value in self.params.items():
 
-            expression = expression.replace(
-                name,
-                str(value)
-            )
+            try:
+                variables[name] = float(value)
+
+            except (TypeError, ValueError):
+                pass
 
         #
-        # Evaluate arithmetic expression
+        # Convert friendly YAML references
+        #
+        # previous.high
+        # previous.low
+        # previous.close
+        #
+        # into safe variable names.
         #
 
-        try:
+        expression = expression.replace(
+            "previous.high",
+            "previous_high"
+        )
 
-            return float(
-                eval(
-                    expression,
-                    {
-                        "__builtins__": {}
-                    }
-                )
-            )
+        expression = expression.replace(
+            "previous.low",
+            "previous_low"
+        )
 
-        except Exception as exc:
+        expression = expression.replace(
+            "previous.close",
+            "previous_close"
+        )
 
-            raise ValueError(
-                f"Unable to evaluate expression "
-                f"'{expression}': {exc}"
-            )    
-        
+        expression = expression.replace(
+            "previous.open",
+            "previous_open"
+        )
+
+        expression = expression.replace(
+            "previous.volume",
+            "previous_volume"
+        )
+        #print("EXPRESSION:", expression)
+        #print("VARIABLES:", variables)
+        evaluator = SafeExpressionEvaluator(
+            variables
+        )
+
+        return evaluator.evaluate(
+            expression
+        )

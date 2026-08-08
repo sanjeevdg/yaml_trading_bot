@@ -9,7 +9,6 @@ market:
   timeframe: 5Min
 
 indicators:
-
   - type: atr
     parameters:
       period: 14
@@ -19,34 +18,31 @@ strategy:
 
   parameters:
     period: 14
-    multiplier: 2
+    multiplier: 1.0
 
   buy:
     all:
-
       - left: close
         op: ">"
         right:
-          expression: "previous.high + ATR * multiplier"
+          expression: "previous_high + ATR * multiplier"
 
   sell:
     all:
-
       - left: close
         op: "<"
         right:
-          expression: "previous.low - ATR * multiplier"
+          expression: "previous_low - ATR * multiplier"
 
 optimize:
-
   period:
     start: 5
-    stop: 30
+    stop: 20
     step: 1
 
   multiplier:
     start: 1
-    stop: 5
+    stop: 3
     step: 1
 
 risk:

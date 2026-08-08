@@ -31,14 +31,12 @@ strategy:
 
   buy:
     all:
-
       - left: EMA_{fast}
         op: crossover
         right: EMA_{slow}
 
   sell:
     all:
-
       - left: EMA_{fast}
         op: crossunder
         right: EMA_{slow}

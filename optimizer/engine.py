@@ -17,6 +17,10 @@ class Optimizer:
         self.strategy = strategy
         self.config = config
 
+    # ---------------------------------------------------------
+    # BUILD INDICATORS
+    # ---------------------------------------------------------
+
     def build_indicators(self, params, dataframe):
 
         engine = IndicatorEngine()
@@ -24,79 +28,218 @@ class Optimizer:
         working_df = dataframe.copy()
 
         #
+        # Find all EMA indicators.
+        #
+        # This lets us distinguish:
+        #
+        # EMA #1 -> fast
+        # EMA #2 -> slow
+        #
+        # for ema_cross.
+        #
+
+        ema_indexes = []
+
+        for index, indicator_cfg in enumerate(
+            self.config.indicators
+        ):
+
+            cfg = indicator_cfg.model_dump(
+                exclude_none=True
+            )
+
+            if cfg["type"].lower() == "ema":
+
+                ema_indexes.append(index)
+
+        #
         # Rebuild every indicator from YAML
         #
 
-        for indicator_cfg in self.config.indicators:
+        for index, indicator_cfg in enumerate(
+            self.config.indicators
+        ):
 
             cfg = deepcopy(
-                indicator_cfg.model_dump(exclude_none=True)
+                indicator_cfg.model_dump(
+                    exclude_none=True
+                )
             )
-
-            p = cfg.setdefault("parameters", {})
-
-            #print("PARAMS :", params)
-            #print("BEFORE:", cfg)
-
-            #
-            # Override optimized values
-            #
 
             indicator_type = cfg["type"].lower()
 
+            parameters = cfg.setdefault(
+                "parameters",
+                {}
+            )
+
+            #
+            # ---------------------------------------------
+            # EMA
+            # ---------------------------------------------
+            #
+
             if indicator_type == "ema":
 
+                #
+                # A strategy such as ema_macd or ema_rsi
+                # has one EMA controlled by "ema".
+                #
+
                 if "ema" in params:
-                    p["period"] = params["ema"]
 
-                elif "fast" in params and p.get("period") == 10:
-                    p["period"] = params["fast"]
+                    parameters["period"] = params["ema"]
 
-                elif "slow" in params and p.get("period") == 20:
-                    p["period"] = params["slow"]
+                #
+                # ema_cross has two EMA indicators.
+                #
+                # First EMA = fast
+                # Second EMA = slow
+                #
+
+                elif (
+                    "fast" in params
+                    and len(ema_indexes) >= 2
+                ):
+
+                    ema_position = ema_indexes.index(
+                        index
+                    )
+
+                    if ema_position == 0:
+
+                        parameters["period"] = (
+                            params["fast"]
+                        )
+
+                    elif ema_position == 1:
+
+                        parameters["period"] = (
+                            params["slow"]
+                        )
+
+            #
+            # ---------------------------------------------
+            # RSI
+            # ---------------------------------------------
+            #
 
             elif indicator_type == "rsi":
 
                 if "period" in params:
-                    p["period"] = params["period"]
+
+                    parameters["period"] = (
+                        params["period"]
+                    )
+
+            #
+            # ---------------------------------------------
+            # MACD
+            # ---------------------------------------------
+            #
 
             elif indicator_type == "macd":
 
                 if "fast" in params:
-                    p["fast"] = params["fast"]
+
+                    parameters["fast"] = (
+                        params["fast"]
+                    )
 
                 if "slow" in params:
-                    p["slow"] = params["slow"]
+
+                    parameters["slow"] = (
+                        params["slow"]
+                    )
 
                 if "signal" in params:
-                    p["signal"] = params["signal"]
+
+                    parameters["signal"] = (
+                        params["signal"]
+                    )
+
+            #
+            # ---------------------------------------------
+            # Bollinger Bands
+            # ---------------------------------------------
+            #
 
             elif indicator_type == "bollinger":
 
                 if "period" in params:
-                    p["period"] = params["period"]
+
+                    parameters["period"] = (
+                        params["period"]
+                    )
 
                 if "stddev" in params:
-                    p["stddev"] = params["stddev"]
+
+                    parameters["stddev"] = (
+                        params["stddev"]
+                    )
+
+            #
+            # ---------------------------------------------
+            # ATR
+            # ---------------------------------------------
+            #
 
             elif indicator_type == "atr":
 
                 if "period" in params:
-                    p["period"] = params["period"]
+
+                    parameters["period"] = (
+                        params["period"]
+                    )
 
             #
-            # Let the factory build the indicator
+            # ---------------------------------------------
+            # SuperTrend
+            # ---------------------------------------------
             #
-            #print(cfg)
-            engine.add(
-                IndicatorFactory.create(cfg)
+
+            elif indicator_type == "supertrend":
+
+                if "period" in params:
+
+                    parameters["period"] = (
+                        params["period"]
+                    )
+
+                if "multiplier" in params:
+
+                    parameters["multiplier"] = (
+                        params["multiplier"]
+                    )
+
+            #
+            # Build indicator through factory
+            #
+
+            indicator = IndicatorFactory.create(
+                cfg
             )
 
-        return engine.apply(working_df)
+            engine.add(indicator)
 
-    def run(self, dataframe):
+        #
+        # Apply all indicators to a fresh dataframe
+        #
 
-        optimize = self.config.strategy.optimize
+        return engine.apply(
+            working_df
+        )
+
+    # ---------------------------------------------------------
+    # BUILD PARAMETER GRID
+    # ---------------------------------------------------------
+
+    def build_parameter_grid(self):
+
+        optimize = (
+            self.config.optimize
+            or {}
+        )
 
         parameter_grid = {}
 
@@ -108,46 +251,173 @@ class Optimizer:
                 values["step"]
             )
 
-        results = []
-        count = 0
-        for params in GridSearch.build(parameter_grid):
+        return parameter_grid
 
-            #
-            # Create strategy
-            #
+    # ---------------------------------------------------------
+    # RUN OPTIMIZATION
+    # ---------------------------------------------------------
+
+    def run(self, dataframe):
+
+        parameter_grid = (
+            self.build_parameter_grid()
+        )
+
+        #
+        # If there is nothing to optimize,
+        # still run exactly one combination.
+        #
+
+        combinations = GridSearch.build(
+            parameter_grid
+        )
+
+        results = []
+
+        count = 0
+
+        for params in combinations:
+
             count += 1
 
             if count % 100 == 0:
-                print(f"Completed {count} combinations...")
-            strategy_cfg = deepcopy(self.config.strategy)
 
-            strategy_cfg.parameters.update(params)
-
-            strategy = StrategyFactory.create(strategy_cfg)
+                print(
+                    f"Completed "
+                    f"{count} combinations..."
+                )
 
             #
+            # ---------------------------------------------
+            # Clone strategy configuration
+            # ---------------------------------------------
+            #
+
+            strategy_cfg = deepcopy(
+                self.config.strategy
+            )
+
+            #
+            # Make sure parameters exists
+            #
+
+            if strategy_cfg.parameters is None:
+
+                strategy_cfg.parameters = {}
+
+            #
+            # Apply optimized parameters
+            #
+
+            strategy_cfg.parameters.update(
+                params
+            )
+
+            #
+            # Create strategy from YAML
+            #
+
+            strategy = StrategyFactory.create(
+                strategy_cfg
+            )
+
+            #
+            # ---------------------------------------------
             # Rebuild indicators
+            # ---------------------------------------------
             #
-            #print(params)
+
             working_df = self.build_indicators(
                 params,
                 dataframe
             )
 
             #
-            # Run backtest
+            # ---------------------------------------------
+            # Backtest
+            # ---------------------------------------------
             #
 
             trades = BacktestEngine(
                 strategy=strategy
-            ).run(working_df)
+            ).run(
+                working_df
+            )
 
-            wins = sum(t.pnl > 0 for t in trades)
-            losses = len(trades) - wins
-            net = sum(t.pnl for t in trades)
+            #
+            # ---------------------------------------------
+            # Statistics
+            # ---------------------------------------------
+            #
+
+            wins = sum(
+                1
+                for trade in trades
+                if trade.pnl > 0
+            )
+
+            losses = sum(
+                1
+                for trade in trades
+                if trade.pnl < 0
+            )
+
+            net_profit = sum(
+                trade.pnl
+                for trade in trades
+            )
+
+            #
+            # Gross profit / loss
+            #
+
+            gross_profit = sum(
+                trade.pnl
+                for trade in trades
+                if trade.pnl > 0
+            )
+
+            gross_loss = sum(
+                abs(trade.pnl)
+                for trade in trades
+                if trade.pnl < 0
+            )
+
+            #
+            # Profit factor
+            #
+
+            if gross_loss > 0:
+
+                profit_factor = (
+                    gross_profit / gross_loss
+                )
+
+            elif gross_profit > 0:
+
+                profit_factor = float("inf")
+
+            else:
+
+                profit_factor = 0
+
+            #
+            # Win rate
+            #
+
+            win_rate = (
+                100 * wins / len(trades)
+                if trades
+                else 0
+            )
+
+            #
+            # ---------------------------------------------
+            # Save result
+            # ---------------------------------------------
+            #
 
             results.append(
-
                 OptimizationResult(
 
                     parameters=params,
@@ -158,20 +428,20 @@ class Optimizer:
 
                     losses=losses,
 
-                    net_profit=net,
+                    net_profit=net_profit,
 
-                    win_rate=(
-                        100 * wins / len(trades)
-                        if trades else 0
-                    ),
+                    win_rate=win_rate,
 
-                    profit_factor=0
+                    profit_factor=profit_factor
                 )
-
             )
+
+        #
+        # Best results first
+        #
 
         return sorted(
             results,
-            key=lambda r: r.net_profit,
+            key=lambda result: result.net_profit,
             reverse=True
         )
