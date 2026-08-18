@@ -130,44 +130,56 @@ def main():
 
     elif mode == "backtest":
 
-        trades = result["trades"]
+        for item in result:
 
-        metrics = result["metrics"]
+            symbol = item["symbol"]
+            backtest_result = item["result"]
 
-        print()
+            trades = backtest_result["trades"]
+            metrics = backtest_result["metrics"]
 
-        print(f"Trades        : {metrics['trades']}")
-        print(f"Wins          : {metrics['wins']}")
-        print(f"Losses        : {metrics['losses']}")
-        print(f"Win Rate      : {metrics['win_rate']:.2f}%")
+            print()
+            print("=" * 60)
+            print(f"BACKTEST RESULTS: {symbol}")
+            print("=" * 60)
 
-        print(f"Gross Profit  : ${metrics['gross_profit']:.2f}")
-        print(f"Gross Loss    : ${metrics['gross_loss']:.2f}")
-        print(f"Net P/L       : ${metrics['net_profit']:.2f}")
+            print()
 
-        profit_factor = metrics["profit_factor"]
+            print(f"Trades        : {metrics['trades']}")
+            print(f"Wins          : {metrics['wins']}")
+            print(f"Losses        : {metrics['losses']}")
+            print(f"Win Rate      : {metrics['win_rate']:.2f}%")
 
-        if profit_factor == float("inf"):
-            print("Profit Factor : ∞")
-        else:
-            print(f"Profit Factor : {profit_factor:.2f}")
+            print(f"Gross Profit  : ${metrics['gross_profit']:.2f}")
+            print(f"Gross Loss    : ${metrics['gross_loss']:.2f}")
+            print(f"Net P/L       : ${metrics['net_profit']:.2f}")
 
-        print(f"Average Trade : ${metrics['average_trade']:.2f}")
-        print(f"Average Win   : ${metrics['average_win']:.2f}")
-        print(f"Average Loss  : ${metrics['average_loss']:.2f}")
+            profit_factor = metrics["profit_factor"]
 
-        print(f"Largest Win   : ${metrics['largest_win']:.2f}")
-        print(f"Largest Loss  : ${metrics['largest_loss']:.2f}")
+            if profit_factor == float("inf"):
+                print("Profit Factor : ∞")
+            else:
+                print(f"Profit Factor : {profit_factor:.2f}")
 
-        print(f"Max Drawdown  : ${metrics['max_drawdown']:.2f}")
+            print(f"Average Trade : ${metrics['average_trade']:.2f}")
+            print(f"Average Win   : ${metrics['average_win']:.2f}")
+            print(f"Average Loss  : ${metrics['average_loss']:.2f}")
 
-        if trades:
+            print(f"Largest Win   : ${metrics['largest_win']:.2f}")
+            print(f"Largest Loss  : ${metrics['largest_loss']:.2f}")
 
-            print("\nLast 5 Trades:\n")
+            print(f"Max Drawdown  : ${metrics['max_drawdown']:.2f}")
 
-            for trade in trades[-5:]:
+            if trades:
 
-                print(trade)
+                print("\nLast 5 Trades:\n")
+
+                for trade in trades[-5:]:
+                    print(trade)
+
+            else:
+
+                print("\nNo trades generated.")
 
     #
     # Optimization Mode
@@ -175,33 +187,45 @@ def main():
 
     elif mode == "optimize":
 
-        results = result
+        for item in result:
 
-        print()
+            symbol = item["symbol"]
+            results = item["result"]
 
-        print(f"Parameter combinations tested : {len(results)}")
+            print()
+            print("=" * 75)
+            print(f"OPTIMIZATION RESULTS: {symbol}")
+            print("=" * 75)
 
-        print()
+            print()
+            print(
+                f"Parameter combinations tested : {len(results)}"
+            )
 
-        print(
-            f"{'Rank':<5}"
-            f"{'Parameters':<30}"
-            f"{'Trades':>8}"
-            f"{'Win %':>10}"
-            f"{'Net Profit':>15}"
-        )
-
-        print("-" * 75)
-
-        for i, r in enumerate(results[:10], start=1):
+            print()
 
             print(
-                f"{i:<5}"
-                f"{str(r.parameters):<30}"
-                f"{r.trades:>8}"
-                f"{r.win_rate:>10.2f}"
-                f"{r.net_profit:>15.2f}"
+                f"{'Rank':<5}"
+                f"{'Parameters':<30}"
+                f"{'Trades':>8}"
+                f"{'Win %':>10}"
+                f"{'Net Profit':>15}"
             )
+
+            print("-" * 75)
+
+            for i, r in enumerate(
+                results[:10],
+                start=1
+            ):
+
+                print(
+                    f"{i:<5}"
+                    f"{str(r.parameters):<30}"
+                    f"{r.trades:>8}"
+                    f"{r.win_rate:>10.2f}"
+                    f"{r.net_profit:>15.2f}"
+                )
 
 
 if __name__ == "__main__":

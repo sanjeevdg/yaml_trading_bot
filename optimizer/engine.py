@@ -339,7 +339,7 @@ class Optimizer:
             #
 
             result = BacktestEngine(
-                strategy=strategy
+                strategy=strategy,cfg=self.config
             ).run(working_df)
 
             trades = result["trades"]

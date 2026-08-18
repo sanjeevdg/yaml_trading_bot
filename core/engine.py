@@ -30,29 +30,15 @@ class TradingEngine:
             config.market
         )
 
-        self.indicators = IndicatorEngine()
+        indicators = IndicatorEngine()
 
         self.strategy = StrategyFactory.create(
             config.strategy
         )
 
-    def calculate_risk_levels(self, price,signal):
+    def calculate_risk_levels(self, signal):
 
-
-        current_price = self.broker.latest_price(signal.symbol)
-
-        stop_loss, take_profit = self.calculate_risk_levels(
-            current_price,signal
-        )
-
-        print(
-            f">>> {signal.symbol} "
-            f"signal={signal.price} "
-            f"current={current_price} "
-            f"SL={stop_loss} "
-            f"TP={take_profit}"
-        )
-
+        entry_price = float(signal.price)
 
         risk = self.cfg.risk.model_dump(
             exclude_none=True
@@ -61,20 +47,31 @@ class TradingEngine:
         stop_loss_percent = risk.get("stop_loss")
         take_profit_percent = risk.get("take_profit")
 
-        entry_price = float(price)
-
         stop_loss = None
         take_profit = None
 
         if stop_loss_percent is not None:
-            stop_loss = entry_price * (
-                1 - float(stop_loss_percent) / 100
+            stop_loss = round(
+                entry_price * (
+                    1 - float(stop_loss_percent) / 100
+                ),
+                2
             )
 
         if take_profit_percent is not None:
-            take_profit = entry_price * (
-                1 + float(take_profit_percent) / 100
+            take_profit = round(
+                entry_price * (
+                    1 + float(take_profit_percent) / 100
+                ),
+                2
             )
+
+        print(
+            f">>> {signal.symbol} "
+            f"entry={entry_price:.2f} "
+            f"SL={stop_loss:.2f} "
+            f"TP={take_profit:.2f}"
+        )
 
         return stop_loss, take_profit
 
@@ -95,35 +92,57 @@ class TradingEngine:
 
         if signal.action.value == "BUY":
 
+            entry_price = float(signal.price)
+
             stop_loss, take_profit = self.calculate_risk_levels(
-                signal.price,signal
+                signal
             )
+
             print(
                 f">>> {signal.symbol} "
-                f"entry={signal.price} "
+                f"entry={entry_price} "
                 f"SL={stop_loss} "
                 f"TP={take_profit}"
             )
+
             result = self.broker.buy(
                 signal.symbol,
                 qty=1,
+                entry_price=entry_price,
                 stop_loss=stop_loss,
                 take_profit=take_profit
             )
 
         elif signal.action.value == "SELL":
 
-            result = self.broker.sell(
-                signal.symbol,
-                qty=1
+            positions = self.broker.positions()
+
+            position = next(
+                (
+                    p for p in positions
+                    if p.symbol == signal.symbol
+                ),
+                None
             )
 
-        elif signal.action.value == "HOLD":
+            if position is None:
 
-            return {
-                "status": "no_trade",
-                "signal": signal
-            }
+                print(
+                    f">>> {signal.symbol} SELL ignored - "
+                    f"no existing long position"
+                )
+
+                return {
+                    "status": "no_position",
+                    "signal": signal
+                }
+
+            qty = abs(float(position.qty))
+
+            result = self.broker.sell(
+                signal.symbol,
+                qty=qty
+            )
 
         else:
 
@@ -132,97 +151,102 @@ class TradingEngine:
                 "signal": signal
             }
 
-        
         return {
             "status": "submitted",
             "signal": signal,
             "order": result
-        }    
+        }   
 
     def run(self, mode="signal"):
 
-        #
-        # Connect
-        #
-
         self.broker.connect()
 
-        #
-        # Download bars
-        #
+        results = []
 
-        df = self.market.get_bars(
+        for symbol in self.cfg.market.symbols:
 
-            symbol=self.cfg.market.symbols[0],
+            print(f"\n{'=' * 60}")
+            print(f"Processing {symbol}")
+            print(f"{'=' * 60}")
 
-            timeframe=self.cfg.market.timeframe,
-
-            limit=300
-
-        )
-
-        #
-        # Indicators
-        #
-
-        from indicators.factory import IndicatorFactory
-
-        for indicator_cfg in self.cfg.indicators:
-
-            indicator = IndicatorFactory.create(
-                indicator_cfg.model_dump(exclude_none=True)
+            # Download bars for this symbol
+            df = self.market.get_bars(
+                symbol=symbol,
+                timeframe=self.cfg.market.timeframe,
+                limit=300
             )
 
-            self.indicators.add(indicator)
+            # Create indicators
+            from indicators.factory import IndicatorFactory
 
-        df = self.indicators.apply(df)
+            # Important: create a fresh indicator engine for each symbol
+            indicators = IndicatorEngine()
 
-        #
-        # Strategy
-        #
+            for indicator_cfg in self.cfg.indicators:
 
-        
-
-        backtester = BacktestEngine(
-            strategy=self.strategy,
-
-            initial_cash=10000,
-
-            quantity=1,
-            risk=self.cfg.risk
-        )
-
-        if mode == "signal":
-
-            result = self.strategy.evaluate(df)
-
-        elif mode == "backtest":
-
-            backtester = BacktestEngine(
-                strategy=self.strategy,
-                risk=self.cfg.risk.model_dump(
-                    exclude_none=True
+                indicator = IndicatorFactory.create(
+                    indicator_cfg.model_dump(
+                        exclude_none=True
+                    )
                 )
-            )
 
-            result = backtester.run(df)
+                indicators.add(indicator)
 
-            return result    
-        elif mode == "optimize":
+            df = indicators.apply(df)
 
-            optimizer = Optimizer(
-                strategy=self.strategy,
-                config=self.cfg
-            )
+            # SIGNAL
+            if mode == "signal":
 
-            return optimizer.run(df)    
-        elif mode == "paper":
+                signal = self.strategy.evaluate(df)
 
-            result = self.execute(df)
+                results.append(signal)
 
-            return result            
-        else:
+            # BACKTEST
+            elif mode == "backtest":
 
-            raise ValueError(f"Unknown mode: {mode}")
+                backtester = BacktestEngine(
+                    strategy=self.strategy,
+                    cfg=self.cfg,
+                    initial_cash=10000,
+                    quantity=1,
+                    risk=self.cfg.risk.model_dump(
+                        exclude_none=True
+                    )
+                )
 
-        return result
+                result = backtester.run(df)
+
+                results.append({
+                    "symbol": symbol,
+                    "result": result
+                })
+
+            # OPTIMIZE
+            elif mode == "optimize":
+
+                optimizer = Optimizer(
+                    strategy=self.strategy,
+                    config=self.cfg
+                )
+
+                result = optimizer.run(df)
+
+                results.append({
+                    "symbol": symbol,
+                    "result": result
+                })
+
+            # PAPER
+            elif mode == "paper":
+
+                result = self.execute(df)
+
+                results.append(result)
+
+            else:
+
+                raise ValueError(
+                    f"Unknown mode: {mode}"
+                )
+
+        return results

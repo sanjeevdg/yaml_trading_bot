@@ -5,8 +5,7 @@ broker:
 
 market:
   provider: alpaca
-  symbols:
-    - APH
+  symbols: [TQQQ, SQQQ]   
   timeframe: 5Min
 
 indicators:

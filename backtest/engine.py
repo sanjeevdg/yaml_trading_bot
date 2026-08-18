@@ -11,11 +11,12 @@ class BacktestEngine:
     def __init__(
         self,
         strategy,
+        cfg,
         initial_cash=10000,
         quantity=1,
-        risk=None
+        risk=None        
     ):
-
+        self.cfg=cfg
         self.strategy = strategy
 
         self.portfolio = Portfolio(

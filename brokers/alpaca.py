@@ -10,7 +10,7 @@ from alpaca.trading.requests import (
     TakeProfitRequest,
     StopLossRequest,
 )
-
+from alpaca.trading.requests import LimitOrderRequest
 from alpaca.trading.enums import (
     OrderSide,
     TimeInForce,
@@ -83,15 +83,17 @@ class AlpacaBroker(Broker):
         self,
         symbol: str,
         qty: float,
+        entry_price: float,
         stop_loss: float | None = None,
         take_profit: float | None = None
     ):
 
-        order = MarketOrderRequest(
+        order = LimitOrderRequest(
             symbol=symbol,
             qty=qty,
             side=OrderSide.BUY,
             time_in_force=TimeInForce.DAY,
+            limit_price=entry_price
         )
 
         if stop_loss is not None and take_profit is not None:
@@ -108,7 +110,7 @@ class AlpacaBroker(Broker):
 
         return self.client.submit_order(
             order_data=order
-        )    
+        )
 
 
 
