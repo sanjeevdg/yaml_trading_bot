@@ -39,33 +39,88 @@ def main():
         action="store_true",
         help="Optimize strategy parameters"
     )
-
+    group.add_argument(
+        "--paper",
+        action="store_true",
+        help="Run live market trading using Alpaca paper account"
+    )
     args = parser.parse_args()
 
     cfg = ConfigLoader.load(args.config)
 
     BotLogger.success("Configuration loaded")
-
+    print(">>> Creating TradingEngine")
     engine = TradingEngine(cfg)
+    print(">>> TradingEngine created")
 
     #
     # Determine execution mode
     #
+    def execute(self):
 
+        signal = self.generate_signal()
+
+        # No trade
+        if signal.action == "HOLD":
+            return {
+                "status": "no_trade",
+                "signal": signal
+            }
+
+        # Connect to Alpaca paper
+        self.broker.connect()
+
+        # Get current position
+        positions = self.broker.positions()
+
+        # Your risk checks go here
+        # ...
+
+        if signal.action == "BUY":
+
+            result = self.broker.buy(
+                signal.symbol,
+                qty=1
+            )
+
+        elif signal.action == "SELL":
+
+            result = self.broker.sell(
+                signal.symbol,
+                qty=1
+            )
+
+        else:
+            return {
+                "status": "ignored",
+                "signal": signal
+            }
+
+        return {
+            "status": "submitted",
+            "signal": signal,
+            "order": result
+        }
     if args.optimize:
         mode = "optimize"
     elif args.backtest:
         mode = "backtest"
+    elif args.paper:
+        mode = "paper"    
     else:
         mode = "signal"
+    print(f">>> Execution mode: {mode}")
 
+    print(">>> Calling engine.run()")    
     result = engine.run(mode=mode)
-
+    print(">>> engine.run() completed")
     #
     # Signal Mode
     #
-
-    if mode == "signal":
+    if mode == "paper":
+        print(">>> PAPER RESULT")
+        print(result)
+    elif mode == "signal":
 
         print(result)
 
@@ -75,18 +130,36 @@ def main():
 
     elif mode == "backtest":
 
-        trades = result
+        trades = result["trades"]
 
-        wins = sum(1 for t in trades if t.pnl > 0)
-        losses = len(trades) - wins
-        net = sum(t.pnl for t in trades)
+        metrics = result["metrics"]
 
         print()
 
-        print(f"Trades : {len(trades)}")
-        print(f"Wins   : {wins}")
-        print(f"Losses : {losses}")
-        print(f"Net P/L: ${net:.2f}")
+        print(f"Trades        : {metrics['trades']}")
+        print(f"Wins          : {metrics['wins']}")
+        print(f"Losses        : {metrics['losses']}")
+        print(f"Win Rate      : {metrics['win_rate']:.2f}%")
+
+        print(f"Gross Profit  : ${metrics['gross_profit']:.2f}")
+        print(f"Gross Loss    : ${metrics['gross_loss']:.2f}")
+        print(f"Net P/L       : ${metrics['net_profit']:.2f}")
+
+        profit_factor = metrics["profit_factor"]
+
+        if profit_factor == float("inf"):
+            print("Profit Factor : ∞")
+        else:
+            print(f"Profit Factor : {profit_factor:.2f}")
+
+        print(f"Average Trade : ${metrics['average_trade']:.2f}")
+        print(f"Average Win   : ${metrics['average_win']:.2f}")
+        print(f"Average Loss  : ${metrics['average_loss']:.2f}")
+
+        print(f"Largest Win   : ${metrics['largest_win']:.2f}")
+        print(f"Largest Loss  : ${metrics['largest_loss']:.2f}")
+
+        print(f"Max Drawdown  : ${metrics['max_drawdown']:.2f}")
 
         if trades:
 

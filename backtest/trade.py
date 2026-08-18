@@ -18,3 +18,4 @@ class Trade:
     quantity: int
 
     pnl: float
+    exit_reason: str = "STRATEGY"

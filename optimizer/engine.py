@@ -338,78 +338,14 @@ class Optimizer:
             # ---------------------------------------------
             #
 
-            trades = BacktestEngine(
+            result = BacktestEngine(
                 strategy=strategy
-            ).run(
-                working_df
-            )
+            ).run(working_df)
 
-            #
-            # ---------------------------------------------
-            # Statistics
-            # ---------------------------------------------
-            #
+            trades = result["trades"]
+            metrics = result["metrics"]
 
-            wins = sum(
-                1
-                for trade in trades
-                if trade.pnl > 0
-            )
-
-            losses = sum(
-                1
-                for trade in trades
-                if trade.pnl < 0
-            )
-
-            net_profit = sum(
-                trade.pnl
-                for trade in trades
-            )
-
-            #
-            # Gross profit / loss
-            #
-
-            gross_profit = sum(
-                trade.pnl
-                for trade in trades
-                if trade.pnl > 0
-            )
-
-            gross_loss = sum(
-                abs(trade.pnl)
-                for trade in trades
-                if trade.pnl < 0
-            )
-
-            #
-            # Profit factor
-            #
-
-            if gross_loss > 0:
-
-                profit_factor = (
-                    gross_profit / gross_loss
-                )
-
-            elif gross_profit > 0:
-
-                profit_factor = float("inf")
-
-            else:
-
-                profit_factor = 0
-
-            #
-            # Win rate
-            #
-
-            win_rate = (
-                100 * wins / len(trades)
-                if trades
-                else 0
-            )
+            
 
             #
             # ---------------------------------------------
@@ -422,17 +358,18 @@ class Optimizer:
 
                     parameters=params,
 
-                    trades=len(trades),
+                    trades=metrics["trades"],
 
-                    wins=wins,
+                    wins=metrics["wins"],
 
-                    losses=losses,
+                    losses=metrics["losses"],
 
-                    net_profit=net_profit,
+                    net_profit=metrics["net_profit"],
 
-                    win_rate=win_rate,
+                    win_rate=metrics["win_rate"],
 
-                    profit_factor=profit_factor
+                    profit_factor=metrics["profit_factor"]
+
                 )
             )
 

@@ -1,6 +1,8 @@
 broker:
   provider: alpaca
+  environment: paper
   paper: true
+
 
 market:
   provider: alpaca

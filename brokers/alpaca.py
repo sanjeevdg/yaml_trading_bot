@@ -2,9 +2,22 @@ from dotenv import load_dotenv
 import os
 
 from alpaca.trading.client import TradingClient
-
+from alpaca.trading.requests import MarketOrderRequest
+from alpaca.trading.enums import OrderSide, TimeInForce
 from .base import Broker
+from alpaca.trading.requests import (
+    MarketOrderRequest,
+    TakeProfitRequest,
+    StopLossRequest,
+)
 
+from alpaca.trading.enums import (
+    OrderSide,
+    TimeInForce,
+)
+from alpaca.data.historical import StockHistoricalDataClient
+
+from alpaca.data.requests import StockLatestQuoteRequest
 load_dotenv()
 
 
@@ -19,15 +32,28 @@ class AlpacaBroker(Broker):
         key = os.getenv("ALPACA_API_KEY")
         secret = os.getenv("ALPACA_SECRET_KEY")
 
-        paper = os.getenv("PAPER", "True").lower() == "true"
+        if not key:
+            raise RuntimeError(
+                "ALPACA_API_KEY is not set"
+            )
+
+        if not secret:
+            raise RuntimeError(
+                "ALPACA_SECRET_KEY is not set"
+            )
+
+        paper = os.getenv("PAPER", "true").lower() == "true"
 
         self.client = TradingClient(
             api_key=key,
             secret_key=secret,
             paper=paper
         )
-
-        return self.client
+        self.data_client = StockHistoricalDataClient(
+            key,
+            secret
+        )
+        return self.client, self.data_client
 
     def account(self):
 
@@ -40,14 +66,62 @@ class AlpacaBroker(Broker):
     def bars(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def latest_price(self, *args, **kwargs):
-        raise NotImplementedError()
+    def latest_price(self, symbol: str) -> float:
+        request = StockLatestQuoteRequest(
+            symbol_or_symbols=symbol
+        )
 
-    def buy(self, *args, **kwargs):
-        raise NotImplementedError()
+        quotes = self.data_client.get_stock_latest_quote(request)
 
-    def sell(self, *args, **kwargs):
-        raise NotImplementedError()
+        quote = quotes[symbol]
 
+        return float(quote.ask_price)
+
+    
+
+    def buy(
+        self,
+        symbol: str,
+        qty: float,
+        stop_loss: float | None = None,
+        take_profit: float | None = None
+    ):
+
+        order = MarketOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=OrderSide.BUY,
+            time_in_force=TimeInForce.DAY,
+        )
+
+        if stop_loss is not None and take_profit is not None:
+
+            order.order_class = "bracket"
+
+            order.take_profit = TakeProfitRequest(
+                limit_price=take_profit
+            )
+
+            order.stop_loss = StopLossRequest(
+                stop_price=stop_loss
+            )
+
+        return self.client.submit_order(
+            order_data=order
+        )    
+
+
+
+    def sell(self, symbol: str, qty: float):
+
+        order = MarketOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=OrderSide.SELL,
+            time_in_force=TimeInForce.DAY
+        )
+
+        return self.client.submit_order(order_data=order)
+        
     def close(self, *args, **kwargs):
         raise NotImplementedError()

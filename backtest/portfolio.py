@@ -23,7 +23,15 @@ class Portfolio:
 
         return symbol in self.positions
 
-    def buy(self, symbol, price, quantity, timestamp):
+    def buy(
+        self,
+        symbol,
+        price,
+        quantity,
+        timestamp,
+        stop_loss=None,
+        take_profit=None
+    ):
 
         cost = price * quantity
 
@@ -36,7 +44,9 @@ class Portfolio:
             symbol=symbol,
             quantity=quantity,
             entry_price=price,
-            entry_time=timestamp
+            entry_time=timestamp,
+            stop_loss=stop_loss,
+            take_profit=take_profit
         )
 
         return True
