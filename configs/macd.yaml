@@ -2,10 +2,12 @@ broker:
   provider: alpaca
   paper: true
 
+
 market:
   provider: alpaca
-  symbols: [TQQQ, SQQQ]   
+  symbols: [UBER, NOW]
   timeframe: 5Min
+
 
 indicators:
 
@@ -15,6 +17,7 @@ indicators:
       slow: 26
       signal: 9
 
+
 strategy:
   type: rules
 
@@ -23,19 +26,22 @@ strategy:
     slow: 26
     signal: 9
 
-  buy:
-    all:
+  signals:
 
-      - left: MACD
-        op: crossover
-        right: MACD_SIGNAL
+    BUY:
+      all:
 
-  sell:
-    all:
+        - left: MACD
+          op: crossover
+          right: MACD_SIGNAL
 
-      - left: MACD
-        op: crossunder
-        right: MACD_SIGNAL
+    SELL:
+      all:
+
+        - left: MACD
+          op: crossunder
+          right: MACD_SIGNAL
+
 
 optimize:
 
@@ -54,6 +60,7 @@ optimize:
     stop: 12
     step: 1
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -61,6 +68,7 @@ risk:
 
   stop_loss: 2
   take_profit: 4
+
 
 schedule:
   interval: 60

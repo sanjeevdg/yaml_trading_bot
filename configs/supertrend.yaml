@@ -2,10 +2,12 @@ broker:
   provider: alpaca
   paper: true
 
+
 market:
   provider: alpaca
-  symbols: [TQQQ, SQQQ]
+  symbols: [UBER, NOW]
   timeframe: 5Min
+
 
 indicators:
 
@@ -18,6 +20,7 @@ indicators:
       period: 10
       multiplier: 3
 
+
 strategy:
   type: rules
 
@@ -25,19 +28,22 @@ strategy:
     period: 10
     multiplier: 3
 
-  buy:
-    all:
+  signals:
 
-      - left: close
-        op: ">"
-        right: SUPERTREND
+    BUY:
+      all:
 
-  sell:
-    all:
+        - left: close
+          op: ">"
+          right: SUPERTREND
 
-      - left: close
-        op: "<"
-        right: SUPERTREND
+    SELL:
+      all:
+
+        - left: close
+          op: "<"
+          right: SUPERTREND
+
 
 optimize:
 
@@ -51,6 +57,7 @@ optimize:
     stop: 5
     step: 1
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -58,6 +65,7 @@ risk:
 
   stop_loss: 2
   take_profit: 4
+
 
 schedule:
   interval: 60

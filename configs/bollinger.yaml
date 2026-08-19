@@ -3,10 +3,12 @@ broker:
   environment: paper
   paper: true
 
+
 market:
   provider: alpaca
-  symbols: [TQQQ, SQQQ]
+  symbols: [UBER, NOW]
   timeframe: 5Min
+
 
 indicators:
 
@@ -15,6 +17,7 @@ indicators:
       period: 20
       stddev: 2
 
+
 strategy:
   type: rules
 
@@ -22,19 +25,22 @@ strategy:
     period: 20
     stddev: 2
 
-  buy:
-    all:
+  signals:
 
-      - left: close
-        op: "<="
-        right: BB_LOWER
+    BUY:
+      all:
 
-  sell:
-    all:
+        - left: close
+          op: "<="
+          right: BB_LOWER
 
-      - left: close
-        op: ">="
-        right: BB_UPPER
+    SELL:
+      all:
+
+        - left: close
+          op: ">="
+          right: BB_UPPER
+
 
 optimize:
 
@@ -48,6 +54,7 @@ optimize:
     stop: 3
     step: 1
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -55,6 +62,7 @@ risk:
 
   stop_loss: 2
   take_profit: 4
+
 
 schedule:
   interval: 60

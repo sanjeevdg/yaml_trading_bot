@@ -3,10 +3,12 @@ broker:
   environment: paper
   paper: true
 
+
 market:
   provider: alpaca
-  symbols: [TQQQ, SQQQ]   
+  symbols: [UGI, DT]
   timeframe: 5Min
+
 
 indicators:
 
@@ -22,6 +24,7 @@ indicators:
     parameters:
       period: 14
 
+
 strategy:
   type: rules
 
@@ -29,17 +32,20 @@ strategy:
     fast: 10
     slow: 20
 
-  buy:
-    all:
-      - left: EMA_{fast}
-        op: crossover
-        right: EMA_{slow}
+  signals:
 
-  sell:
-    all:
-      - left: EMA_{fast}
-        op: crossunder
-        right: EMA_{slow}
+    BUY:
+      all:
+        - left: EMA_{fast}
+          op: crossover
+          right: EMA_{slow}
+
+    SELL:
+      all:
+        - left: EMA_{fast}
+          op: crossunder
+          right: EMA_{slow}
+
 
 optimize:
 
@@ -53,6 +59,7 @@ optimize:
     stop: 60
     step: 5
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -60,6 +67,7 @@ risk:
 
   stop_loss: 2.0
   take_profit: 4.0
+
 
 schedule:
   interval: 60

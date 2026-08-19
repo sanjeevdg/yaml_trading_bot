@@ -5,11 +5,22 @@ from strategies.resolver import IndicatorValueResolver
 
 class RuleStrategy(Strategy):
 
-    def __init__(self, parameters=None, buy=None, sell=None):
+    def __init__(self, parameters=None, signals=None):
         self.params = parameters or {}
-        self.buy_rules = buy or {}
-        self.sell_rules = sell or {}
+        self.signals = signals or {}
 
+        self.buy_rules = self.signals.get("BUY", {})
+        self.sell_rules = self.signals.get("SELL", {})
+        '''
+        for action, rules in self.signals.items():
+            if self.evaluate_group(rules, current, previous):
+                return Signal(
+                    action=Action[action],
+                    symbol=current["symbol"],
+                    price=float(current["close"]),
+                    reason=f"YAML {action} rules satisfied"
+                )
+        '''
     def evaluate(self, df):
 
         if len(df) < 2:

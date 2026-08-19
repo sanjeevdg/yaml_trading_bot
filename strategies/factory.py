@@ -49,13 +49,8 @@ class StrategyFactory:
         if strategy_type == "rules":
 
             return RuleStrategy(
-
                 parameters=config.parameters or {},
-
-                buy=config.buy or {},
-
-                sell=config.sell or {}
-
+                signals=config.signals or {}
             )
 
         #

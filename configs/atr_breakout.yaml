@@ -6,13 +6,15 @@ broker:
 
 market:
   provider: alpaca
-  symbols:  [TQQQ, SQQQ]
+  symbols: [UBER, NOW]
   timeframe: 5Min
+
 
 indicators:
   - type: atr
     parameters:
       period: 14
+
 
 strategy:
   type: rules
@@ -21,19 +23,22 @@ strategy:
     period: 14
     multiplier: 1.0
 
-  buy:
-    all:
-      - left: close
-        op: ">"
-        right:
-          expression: "previous_high + ATR * multiplier"
+  signals:
 
-  sell:
-    all:
-      - left: close
-        op: "<"
-        right:
-          expression: "previous_low - ATR * multiplier"
+    BUY:
+      all:
+        - left: close
+          op: ">"
+          right:
+            expression: "previous_high + ATR * multiplier"
+
+    SELL:
+      all:
+        - left: close
+          op: "<"
+          right:
+            expression: "previous_low - ATR * multiplier"
+
 
 optimize:
   period:
@@ -46,6 +51,7 @@ optimize:
     stop: 3
     step: 1
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -53,6 +59,7 @@ risk:
 
   stop_loss: 2
   take_profit: 4
+
 
 schedule:
   interval: 60

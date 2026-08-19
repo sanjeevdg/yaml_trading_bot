@@ -2,10 +2,12 @@ broker:
   provider: alpaca
   paper: true
 
+
 market:
   provider: alpaca
-  symbols: [TQQQ, SQQQ]
+  symbols: [UBER, NOW]
   timeframe: 5Min
+
 
 indicators:
 
@@ -19,6 +21,7 @@ indicators:
     parameters:
       period: 14
 
+
 strategy:
   type: rules
 
@@ -30,27 +33,30 @@ strategy:
     oversold: 35
     overbought: 65
 
-  buy:
-    all:
+  signals:
 
-      - left: MACD
-        op: ">"
-        right: MACD_SIGNAL
+    BUY:
+      all:
 
-      - left: RSI_{period}
-        op: "<="
-        right: oversold
+        - left: MACD
+          op: ">"
+          right: MACD_SIGNAL
 
-  sell:
-    all:
+        - left: RSI_{period}
+          op: "<="
+          right: oversold
 
-      - left: MACD
-        op: "<"
-        right: MACD_SIGNAL
+    SELL:
+      all:
 
-      - left: RSI_{period}
-        op: ">="
-        right: overbought
+        - left: MACD
+          op: "<"
+          right: MACD_SIGNAL
+
+        - left: RSI_{period}
+          op: ">="
+          right: overbought
+
 
 optimize:
 
@@ -84,6 +90,7 @@ optimize:
     stop: 80
     step: 5
 
+
 risk:
   position_size:
     type: fixed_cash
@@ -91,6 +98,7 @@ risk:
 
   stop_loss: 2
   take_profit: 4
+
 
 schedule:
   interval: 60
