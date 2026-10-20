@@ -59,4 +59,4 @@ class StrategyFactory:
 
         return strategy_cls(
             **config.parameters
-        )
+        )   

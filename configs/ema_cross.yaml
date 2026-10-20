@@ -6,7 +6,7 @@ broker:
 
 market:
   provider: alpaca
-  symbols: [UGI, DT]
+  symbols: [SPY, TQQQ, SQQQ]
   timeframe: 5Min
 
 

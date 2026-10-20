@@ -5,7 +5,7 @@ broker:
 
 market:
   provider: alpaca
-  symbols: [UBER, NOW]
+  symbols: [SQQQ, TQQQ]
   timeframe: 5Min
 
 

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 import os
-
+from decimal import Decimal, ROUND_HALF_UP
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
@@ -87,6 +87,27 @@ class AlpacaBroker(Broker):
         stop_loss: float | None = None,
         take_profit: float | None = None
     ):
+
+
+
+        entry_price = float(
+            Decimal(str(entry_price)).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP
+            )
+        )
+
+        if stop_loss is not None:
+            stop_loss = round(float(stop_loss), 2)
+
+        if take_profit is not None:
+            take_profit = round(float(take_profit), 2)
+
+
+
+
+
+
 
         order = LimitOrderRequest(
             symbol=symbol,

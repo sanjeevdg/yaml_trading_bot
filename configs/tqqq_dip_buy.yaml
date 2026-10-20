@@ -1,0 +1,34 @@
+
+broker:
+  provider: alpaca
+  environment: paper
+  paper: true
+
+market:
+  provider: alpaca
+  symbols: [TQQQ]
+  timeframe: 5Min
+
+indicators: []
+
+strategy:
+  type: rules
+
+  parameters:
+    dip_percent: 2.0
+
+  signals:
+    BUY:
+      all:
+        - left: close
+          op: percent_drop
+          right: previous_close
+          value: 2.0
+
+risk:
+  position_size:
+    type: fixed_quantity
+    quantity: 1
+
+schedule:
+  interval: 60

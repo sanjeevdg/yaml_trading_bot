@@ -11,6 +11,9 @@ from strategies.factory import StrategyFactory
 from backtest.engine import BacktestEngine
 from optimizer.engine import Optimizer
 from signals.signal import Signal, Action
+from rich.progress import Progress, SpinnerColumn, BarColumn
+from rich.progress import TextColumn, TimeElapsedColumn
+
 
 class TradingEngine:
 
@@ -89,7 +92,9 @@ class TradingEngine:
 
         # Connect to paper broker
         self.broker.connect()
-
+        # Default risk levels for signals without calculated levels
+        stop_loss = None
+        take_profit = None
         if signal.action.value == "BUY":
 
             entry_price = float(signal.price)
@@ -154,99 +159,123 @@ class TradingEngine:
         return {
             "status": "submitted",
             "signal": signal,
-            "order": result
+            "order": result,
+            "stop_loss": stop_loss,
+            "take_profit": take_profit
         }   
 
+    
     def run(self, mode="signal"):
 
         self.broker.connect()
 
         results = []
+        symbols = self.cfg.market.symbols
 
-        for symbol in self.cfg.market.symbols:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("{task.completed}/{task.total}"),
+            TimeElapsedColumn()
+        ) as progress:
 
-            print(f"\n{'=' * 60}")
-            print(f"Processing {symbol}")
-            print(f"{'=' * 60}")
-
-            # Download bars for this symbol
-            df = self.market.get_bars(
-                symbol=symbol,
-                timeframe=self.cfg.market.timeframe,
-                limit=300
+            task = progress.add_task(
+                "Preparing...",
+                total=len(symbols)
             )
 
-            # Create indicators
-            from indicators.factory import IndicatorFactory
+            for symbol in symbols:
 
-            # Important: create a fresh indicator engine for each symbol
-            indicators = IndicatorEngine()
+                progress.update(
+                    task,
+                    description=f"Processing {symbol}"
+                )
 
-            for indicator_cfg in self.cfg.indicators:
+                print(f"\n{'=' * 60}")
+                print(f"Processing {symbol}")
+                print(f"{'=' * 60}")
 
-                indicator = IndicatorFactory.create(
-                    indicator_cfg.model_dump(
-                        exclude_none=True
+                # Download bars for this symbol
+                df = self.market.get_bars(
+                    symbol=symbol,
+                    timeframe=self.cfg.market.timeframe,
+                    limit=300
+                )
+
+                # Create indicators
+                from indicators.factory import IndicatorFactory
+
+                # Create a fresh indicator engine for each symbol
+                indicators = IndicatorEngine()
+
+                for indicator_cfg in self.cfg.indicators:
+
+                    indicator = IndicatorFactory.create(
+                        indicator_cfg.model_dump(
+                            exclude_none=True
+                        )
                     )
-                )
 
-                indicators.add(indicator)
+                    indicators.add(indicator)
 
-            df = indicators.apply(df)
+                df = indicators.apply(df)
 
-            # SIGNAL
-            if mode == "signal":
+                # SIGNAL
+                if mode == "signal":
 
-                signal = self.strategy.evaluate(df)
+                    signal = self.strategy.evaluate(df)
+                    results.append(signal)
 
-                results.append(signal)
+                # BACKTEST
+                elif mode == "backtest":
 
-            # BACKTEST
-            elif mode == "backtest":
-
-                backtester = BacktestEngine(
-                    strategy=self.strategy,
-                    cfg=self.cfg,
-                    initial_cash=10000,
-                    quantity=1,
-                    risk=self.cfg.risk.model_dump(
-                        exclude_none=True
+                    backtester = BacktestEngine(
+                        strategy=self.strategy,
+                        cfg=self.cfg,
+                        initial_cash=10000,
+                        quantity=1,
+                        risk=self.cfg.risk.model_dump(
+                            exclude_none=True
+                        )
                     )
-                )
 
-                result = backtester.run(df)
+                    result = backtester.run(df)
 
-                results.append({
-                    "symbol": symbol,
-                    "result": result
-                })
+                    results.append({
+                        "symbol": symbol,
+                        "result": result
+                    })
 
-            # OPTIMIZE
-            elif mode == "optimize":
+                # OPTIMIZE
+                elif mode == "optimize":
 
-                optimizer = Optimizer(
-                    strategy=self.strategy,
-                    config=self.cfg
-                )
+                    optimizer = Optimizer(
+                        strategy=self.strategy,
+                        config=self.cfg
+                    )
 
-                result = optimizer.run(df)
+                    result = optimizer.run(df)
 
-                results.append({
-                    "symbol": symbol,
-                    "result": result
-                })
+                    results.append({
+                        "symbol": symbol,
+                        "result": result
+                    })
 
-            # PAPER
-            elif mode == "paper":
+                # PAPER
+                elif mode == "paper":
 
-                result = self.execute(df)
+                    result = self.execute(df)
+                    results.append(result)
 
-                results.append(result)
+                else:
 
-            else:
+                    raise ValueError(
+                        f"Unknown mode: {mode}"
+                    )
 
-                raise ValueError(
-                    f"Unknown mode: {mode}"
-                )
+                # Advance after this symbol has been processed
+                progress.update(task, advance=1)
 
         return results
+

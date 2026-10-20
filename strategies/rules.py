@@ -21,6 +21,7 @@ class RuleStrategy(Strategy):
                     reason=f"YAML {action} rules satisfied"
                 )
         '''
+  
     def evaluate(self, df):
 
         if len(df) < 2:
@@ -34,39 +35,37 @@ class RuleStrategy(Strategy):
         current = df.iloc[-1]
         previous = df.iloc[-2]
 
-        if self.evaluate_group(
-            self.buy_rules,
-            current,
-            previous
-        ):
+        for signal_name, rules in self.signals.items():
+
+            if not self.evaluate_group(
+                rules,
+                current,
+                previous
+            ):
+                continue
+
+            try:
+                action = Action[signal_name.upper()]
+            except KeyError:
+                raise ValueError(
+                    f"Unknown signal action: {signal_name}"
+                )
+
             return Signal(
-                action=Action.BUY,
+                action=action,
                 symbol=current["symbol"],
                 price=float(current["close"]),
-                reason="YAML buy rules satisfied"
+                reason=f"YAML {signal_name} rules satisfied"
             )
 
-        if self.evaluate_group(
-            self.sell_rules,
-            current,
-            previous
-        ):
-            return Signal(
-                action=Action.SELL,
-                symbol=current["symbol"],
-                price=float(current["close"]),
-                reason="YAML sell rules satisfied"
-            )
-        #print("RULE PARAMS:", self.params)
-        #print("BUY RULES:", self.buy_rules)
-        #print("SELL RULES:", self.sell_rules)
-        #print("COLUMNS:", df.columns.tolist())    
+        # No rules matched: return HOLD instead of None
         return Signal(
             action=Action.HOLD,
             symbol=current["symbol"],
             price=float(current["close"]),
-            reason="No YAML rule satisfied"
+            reason="No YAML rules matched"
         )
+
 
     def evaluate_group(
         self,

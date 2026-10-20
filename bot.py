@@ -8,6 +8,173 @@ from core import ConfigLoader
 from core.engine import TradingEngine
 from core.logger import BotLogger
 
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+def show_paper_dashboard(results, broker):
+
+    console.print()
+    console.print(
+        Panel(
+            "[bold cyan]YAML TRADING BOT[/bold cyan]\n"
+            "[yellow]PAPER TRADING[/yellow]",
+            expand=False
+        )
+    )
+
+    # Account summary
+    try:
+        account = broker.account()
+
+        equity = float(account.equity)
+        cash = float(account.cash)
+        previous_equity = float(account.last_equity)
+        day_pl = equity - previous_equity
+
+        account_table = Table(title="Account Summary")
+        account_table.add_column("Metric")
+        account_table.add_column("Value", justify="right")
+
+        account_table.add_row("Equity", f"${equity:,.2f}")
+        account_table.add_row("Cash", f"${cash:,.2f}")
+        account_table.add_row(
+            "Day P/L",
+            f"${day_pl:+,.2f}"
+        )
+
+        console.print(account_table)
+
+    except Exception as exc:
+        console.print(
+            f"[yellow]Account summary unavailable: {exc}[/yellow]"
+        )
+
+    # Signals and order results
+    order_table = Table(title="Trading Results")
+    order_table.add_column("Symbol")
+    order_table.add_column("Signal")
+    order_table.add_column("Price", justify="right")
+    order_table.add_column("Result")
+    order_table.add_column("Order Status")
+    order_table.add_column("Limit Price", justify="right")
+    order_table.add_column("Stop-Loss", justify="right")
+    order_table.add_column("Take-Profit", justify="right")
+
+    for item in results:
+        signal = item.get("signal")
+
+        if signal is None:
+            continue
+
+        
+        order = item.get("order")
+        action = getattr(signal.action, "value", signal.action)
+        status = item.get("status", "unknown")
+        order_status = "-"
+        limit_price = "-"
+
+        # Refresh the order from Alpaca to get its latest status
+        if order is not None:
+            try:
+                order = broker.client.get_order_by_id(order.id)
+            except Exception as exc:
+                console.print(
+                    f"[yellow]Could not refresh order "
+                    f"for {signal.symbol}: {exc}[/yellow]"
+                )
+
+            order_status = str(
+                getattr(order.status, "value", order.status)
+            ).lower()
+
+            if order_status == "filled":
+                status = "filled"
+            elif order_status == "partially_filled":
+                status = "partially_filled"
+            elif order_status in {
+                "rejected", "canceled", "cancelled", "expired"
+            }:
+                status = order_status
+            else:
+                status = "submitted"
+
+            if order.limit_price is not None:
+                limit_price = f"${float(order.limit_price):.2f}"
+
+
+
+
+        if order is not None:
+            order_status = str(
+                getattr(order.status, "value", order.status)
+            )
+
+            if order.limit_price is not None:
+                limit_price = f"${float(order.limit_price):.2f}"
+
+        
+        stop_loss = item.get("stop_loss")
+        take_profit = item.get("take_profit")
+
+        stop_loss_text = (
+            f"${float(stop_loss):.2f}"
+            if stop_loss is not None
+            else "-"
+        )
+
+        take_profit_text = (
+            f"${float(take_profit):.2f}"
+            if take_profit is not None
+            else "-"
+        )        
+
+
+
+
+        order_table.add_row(
+            signal.symbol,
+            str(action),
+            f"${float(signal.price):.2f}",
+            str(status),
+            order_status,
+            limit_price,
+            stop_loss_text,
+            take_profit_text
+        )
+
+    console.print(order_table)
+
+    # Current positions
+    try:
+        positions = broker.positions()
+
+        position_table = Table(title="Current Positions")
+        position_table.add_column("Symbol")
+        position_table.add_column("Qty", justify="right")
+        position_table.add_column("Market Value", justify="right")
+        position_table.add_column("Unrealized P/L", justify="right")
+
+        for position in positions:
+            position_table.add_row(
+                position.symbol,
+                str(position.qty),
+                f"${float(position.market_value):,.2f}",
+                f"${float(position.unrealized_pl):+,.2f}"
+            )
+
+        console.print(position_table)
+
+        if not positions:
+            console.print("[dim]No open positions.[/dim]")
+
+    except Exception as exc:
+        console.print(
+            f"[yellow]Positions unavailable: {exc}[/yellow]"
+        )
+
 
 def main():
 
@@ -118,8 +285,7 @@ def main():
     # Signal Mode
     #
     if mode == "paper":
-        print(">>> PAPER RESULT")
-        print(result)
+        show_paper_dashboard(result, engine.broker)
     elif mode == "signal":
 
         print(result)
